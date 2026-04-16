@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Unit {
+  count
+  kg
+  litre
+}
+
+enum UserRole {
+  OPERATOR
+  MANAGER
+  ADMIN
+}
+
+enum MovementType {
+  stock_in
+  checkout
+}
+
+model Department {
+  id        String   @id
+  name      String   @unique
+  code      String?
+  createdAt DateTime @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @map("updated_at") @db.Timestamptz(6)
+
+  users User[]
+  items Item[]
+
+  @@map("departments")
+}
+
+model User {
+  id           String   @id
+  fullName     String   @map("full_name")
+  role         UserRole
+  badgeCode    String?  @map("badge_code")
+  departmentId String?  @map("department_id")
+  createdAt    DateTime @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @map("updated_at") @db.Timestamptz(6)
+
+  department Department?     @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  movements  StockMovement[]
+
+  @@index([departmentId])
+  @@map("users")
+}
+
+model Item {
+  id           String   @id
+  name         String
+  unit         Unit
+  currentStock Int      @map("current_stock")
+  minimumStock Int      @map("minimum_stock")
+  departmentId String?  @map("department_id")
+  description  String?
+  createdAt    DateTime @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @map("updated_at") @db.Timestamptz(6)
+
+  department Department?     @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  movements  StockMovement[]
+
+  @@index([departmentId])
+  @@index([name])
+  @@map("items")
+}
+
+model StockMovement {
+  id                String       @id
+  itemId            String       @map("item_id")
+  movementType      MovementType @map("movement_type")
+  quantity          Int
+  unit              Unit
+  performedByUserId String       @map("performed_by_user_id")
+  note              String?
+  reference         String?
+  createdAt         DateTime     @map("created_at") @db.Timestamptz(6)
+
+  item      Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  performer User @relation(fields: [performedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([itemId, createdAt(sort: Desc)])
+  @@index([performedByUserId])
+  @@map("stock_movements")
+}

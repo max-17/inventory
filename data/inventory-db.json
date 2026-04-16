@@ -1,0 +1,261 @@
+{
+  "departments": [
+    {
+      "id": "dept-crushing",
+      "name": "Crushing",
+      "code": "CRS",
+      "created_at": "2026-04-16T08:00:00.000Z",
+      "updated_at": "2026-04-16T08:00:00.000Z"
+    },
+    {
+      "id": "dept-conveyor",
+      "name": "Conveyor",
+      "code": "CNV",
+      "created_at": "2026-04-16T08:00:00.000Z",
+      "updated_at": "2026-04-16T07:56:16.858Z"
+    },
+    {
+      "id": "dept-mechanical",
+      "name": "Mechanical",
+      "code": "MCH",
+      "created_at": "2026-04-16T08:00:00.000Z",
+      "updated_at": "2026-04-16T08:00:00.000Z"
+    },
+    {
+      "id": "dept-electrical",
+      "name": "Electrical",
+      "code": "ELC",
+      "created_at": "2026-04-16T08:00:00.000Z",
+      "updated_at": "2026-04-16T08:00:00.000Z"
+    },
+    {
+      "id": "dept-2cabde92-2d8a-43d3-834f-7ca3c7ea0417",
+      "name": "Texnik xafsizlik",
+      "code": null,
+      "created_at": "2026-04-16T07:56:41.622Z",
+      "updated_at": "2026-04-16T07:56:41.622Z"
+    }
+  ],
+  "users": [
+    {
+      "id": "user-operator-1",
+      "full_name": "Akmal Operator",
+      "role": "operator",
+      "badge_code": "BADGE-001",
+      "department_id": "dept-mechanical",
+      "created_at": "2026-04-16T08:00:00.000Z",
+      "updated_at": "2026-04-16T08:00:00.000Z"
+    },
+    {
+      "id": "user-manager-1",
+      "full_name": "Dilshod Manager",
+      "role": "manager",
+      "badge_code": "BADGE-002",
+      "department_id": null,
+      "created_at": "2026-04-16T08:00:00.000Z",
+      "updated_at": "2026-04-16T08:00:00.000Z"
+    }
+  ],
+  "items": [
+    {
+      "id": "BRG-6312",
+      "name": "6312 bearing",
+      "unit": "count",
+      "current_stock": 0,
+      "minimum_stock": 6,
+      "department_id": "dept-crushing",
+      "description": "Crusher shaft bearing",
+      "created_at": "2026-04-16T08:00:00.000Z",
+      "updated_at": "2026-04-16T08:52:04.091Z"
+    },
+    {
+      "id": "BELT-800",
+      "name": "Conveyor belt segment",
+      "unit": "kg",
+      "current_stock": 359,
+      "minimum_stock": 120,
+      "department_id": "dept-conveyor",
+      "description": "Rubber belt spare section",
+      "created_at": "2026-04-16T08:00:00.000Z",
+      "updated_at": "2026-04-16T08:51:48.527Z"
+    },
+    {
+      "id": "OIL-HYD-46",
+      "name": "Hydraulic oil 46",
+      "unit": "litre",
+      "current_stock": 139,
+      "minimum_stock": 60,
+      "department_id": "dept-mechanical",
+      "description": "Hydraulic service oil",
+      "created_at": "2026-04-16T08:00:00.000Z",
+      "updated_at": "2026-04-16T08:51:48.527Z"
+    },
+    {
+      "id": "SNSR-M12",
+      "name": "M12 inductive sensor",
+      "unit": "count",
+      "current_stock": 18,
+      "minimum_stock": 8,
+      "department_id": "dept-electrical",
+      "description": "Spare sensor for feeders",
+      "created_at": "2026-04-16T08:00:00.000Z",
+      "updated_at": "2026-04-16T08:00:00.000Z"
+    },
+    {
+      "id": "BOLT-M24",
+      "name": "M24 bolt and nut set",
+      "unit": "count",
+      "current_stock": 220,
+      "minimum_stock": 80,
+      "department_id": null,
+      "description": "General fastener set",
+      "created_at": "2026-04-16T08:00:00.000Z",
+      "updated_at": "2026-04-16T08:00:00.000Z"
+    },
+    {
+      "id": "some-item-id",
+      "name": "some item",
+      "unit": "kg",
+      "current_stock": 20,
+      "minimum_stock": 5,
+      "department_id": "dept-2cabde92-2d8a-43d3-834f-7ca3c7ea0417",
+      "description": null,
+      "created_at": "2026-04-16T08:32:13.975Z",
+      "updated_at": "2026-04-16T08:33:22.808Z"
+    }
+  ],
+  "stock_movements": [
+    {
+      "id": "mov-1",
+      "item_id": "BRG-6312",
+      "movement_type": "stock_in",
+      "quantity": 10,
+      "unit": "count",
+      "performed_by_user_id": "user-operator-1",
+      "note": "Initial stock",
+      "reference": null,
+      "created_at": "2026-04-16T08:15:00.000Z"
+    },
+    {
+      "id": "mov-2",
+      "item_id": "BRG-6312",
+      "movement_type": "checkout",
+      "quantity": 6,
+      "unit": "count",
+      "performed_by_user_id": "user-operator-1",
+      "note": "Crusher maintenance",
+      "reference": "WO-102",
+      "created_at": "2026-04-16T09:00:00.000Z"
+    },
+    {
+      "id": "mov-3",
+      "item_id": "BELT-800",
+      "movement_type": "stock_in",
+      "quantity": 360,
+      "unit": "kg",
+      "performed_by_user_id": "user-operator-1",
+      "note": "New roll",
+      "reference": "PO-44",
+      "created_at": "2026-04-16T09:15:00.000Z"
+    },
+    {
+      "id": "mov-4",
+      "item_id": "OIL-HYD-46",
+      "movement_type": "stock_in",
+      "quantity": 140,
+      "unit": "litre",
+      "performed_by_user_id": "user-operator-1",
+      "note": "Warehouse refill",
+      "reference": "PO-52",
+      "created_at": "2026-04-16T09:30:00.000Z"
+    },
+    {
+      "id": "mov-5",
+      "item_id": "SNSR-M12",
+      "movement_type": "stock_in",
+      "quantity": 18,
+      "unit": "count",
+      "performed_by_user_id": "user-operator-1",
+      "note": "Initial stock",
+      "reference": null,
+      "created_at": "2026-04-16T09:45:00.000Z"
+    },
+    {
+      "id": "mov-6",
+      "item_id": "BOLT-M24",
+      "movement_type": "stock_in",
+      "quantity": 220,
+      "unit": "count",
+      "performed_by_user_id": "user-operator-1",
+      "note": "Common spare pack",
+      "reference": "PO-61",
+      "created_at": "2026-04-16T10:00:00.000Z"
+    },
+    {
+      "id": "mov-ad15a70a-e726-4320-82c4-7a82b5ee29cc",
+      "item_id": "some-item-id",
+      "movement_type": "stock_in",
+      "quantity": 14,
+      "unit": "kg",
+      "performed_by_user_id": "user-operator-1",
+      "note": "Opening stock",
+      "reference": null,
+      "created_at": "2026-04-16T08:32:13.975Z"
+    },
+    {
+      "id": "mov-453ce47f-a2c4-4c9b-aac6-d4370134e4e5",
+      "item_id": "some-item-id",
+      "movement_type": "stock_in",
+      "quantity": 6,
+      "unit": "kg",
+      "performed_by_user_id": "user-operator-1",
+      "note": null,
+      "reference": null,
+      "created_at": "2026-04-16T08:33:22.809Z"
+    },
+    {
+      "id": "mov-7dbdd04c-1bf9-40e2-93b6-1242d949dd83",
+      "item_id": "BRG-6312",
+      "movement_type": "checkout",
+      "quantity": 1,
+      "unit": "count",
+      "performed_by_user_id": "user-operator-1",
+      "note": null,
+      "reference": null,
+      "created_at": "2026-04-16T08:51:48.527Z"
+    },
+    {
+      "id": "mov-a4b0e320-7a8a-4ec1-9b13-330d211bcef8",
+      "item_id": "BELT-800",
+      "movement_type": "checkout",
+      "quantity": 1,
+      "unit": "kg",
+      "performed_by_user_id": "user-operator-1",
+      "note": null,
+      "reference": null,
+      "created_at": "2026-04-16T08:51:48.527Z"
+    },
+    {
+      "id": "mov-db91ebe2-7941-4148-b427-64e15606d011",
+      "item_id": "OIL-HYD-46",
+      "movement_type": "checkout",
+      "quantity": 1,
+      "unit": "litre",
+      "performed_by_user_id": "user-operator-1",
+      "note": null,
+      "reference": null,
+      "created_at": "2026-04-16T08:51:48.527Z"
+    },
+    {
+      "id": "mov-c4494eb5-ae79-41c8-b705-185c5ba6b516",
+      "item_id": "BRG-6312",
+      "movement_type": "checkout",
+      "quantity": 3,
+      "unit": "count",
+      "performed_by_user_id": "user-operator-1",
+      "note": null,
+      "reference": null,
+      "created_at": "2026-04-16T08:52:04.091Z"
+    }
+  ]
+}
