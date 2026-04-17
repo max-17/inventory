@@ -924,6 +924,27 @@ export async function listItemMovements(
   return movements.map(mapMovement);
 }
 
+export async function listRecentMovements(
+  movementType?: MovementType,
+): Promise<ItemMovementRecord[]> {
+  const movements = await db.stockMovement.findMany({
+    where: movementType
+      ? {
+          movementType,
+        }
+      : undefined,
+    include: {
+      item: true,
+      performer: true,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  return movements.map(mapMovement);
+}
+
 export async function getInventorySnapshot(): Promise<InventorySnapshot> {
   const [departments, items] = await Promise.all([
     listDepartments(),

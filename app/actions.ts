@@ -180,6 +180,7 @@ export async function createItemAction(
     const snapshot = await getInventorySnapshot();
     revalidatePath("/inventory");
     revalidatePath("/checkout");
+    revalidatePath("/activity");
 
     return {
       ok: true,
@@ -209,6 +210,7 @@ export async function updateItemAction(
     const snapshot = await getInventorySnapshot();
     revalidatePath("/inventory");
     revalidatePath("/checkout");
+    revalidatePath("/activity");
 
     return {
       ok: true,
@@ -238,6 +240,7 @@ export async function stockInAction(
     const snapshot = await getInventorySnapshot();
     revalidatePath("/inventory");
     revalidatePath("/checkout");
+    revalidatePath("/activity");
 
     return {
       ok: true,

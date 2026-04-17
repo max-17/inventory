@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  ActivityIcon,
   BoxesIcon,
   Building2Icon,
   PanelLeftCloseIcon,
@@ -23,6 +24,7 @@ import { cn } from "@/lib/utils";
 const navigation = [
   { href: "/inventory", label: "Inventory", icon: BoxesIcon },
   { href: "/checkout", label: "Checkout", icon: ScanLineIcon },
+  { href: "/activity", label: "Activity", icon: ActivityIcon },
   { href: "/departments", label: "Departments", icon: Building2Icon },
 ];
 
