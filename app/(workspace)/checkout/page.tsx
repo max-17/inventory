@@ -1,8 +1,8 @@
-import { CheckoutPage } from "@/components/checkout/checkout-page";
-import { getInventorySnapshot, getUsers } from "@/lib/inventory/service";
+import { CheckoutUserPage } from "@/components/checkout/checkout-user-page";
+import { getUsers } from "@/lib/inventory/service";
 
 export default async function CheckoutRoute() {
-  const [snapshot, users] = await Promise.all([getInventorySnapshot(), getUsers()]);
+  const users = await getUsers();
 
-  return <CheckoutPage initialSnapshot={snapshot} users={users} />;
+  return <CheckoutUserPage users={users} />;
 }

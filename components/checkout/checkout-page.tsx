@@ -1,19 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { ScanLineIcon, XIcon } from "lucide-react";
 
 import { checkoutAction } from "@/app/actions";
 import { ItemBrowser } from "@/components/item-browser";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -72,11 +67,12 @@ const unsupportedScannerMessage =
 
 export function CheckoutPage({
   initialSnapshot,
-  users,
+  selectedUser,
 }: {
   initialSnapshot: InventorySnapshot;
-  users: User[];
+  selectedUser: User;
 }) {
+  const router = useRouter();
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [query, setQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"all" | "others" | string>("all");
@@ -89,11 +85,8 @@ export function CheckoutPage({
   const [scanStatus, setScanStatus] = useState(
     "Point your camera at an item QR code or barcode.",
   );
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const performedByUserId = selectedUserId ?? "";
-  const selectedUser = users.find((user) => user.id === selectedUserId) ?? null;
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const scanFrameRef = useRef<number | null>(null);
@@ -119,6 +112,7 @@ export function CheckoutPage({
   const otherCount = snapshot.items.filter(
     (item) => item.department_id === null,
   ).length;
+
   const tabs = [
     { id: "all", label: "All", count: snapshot.items.length },
     ...snapshot.departments.map((department) => ({
@@ -138,6 +132,7 @@ export function CheckoutPage({
     const stillVisible = visibleItems.some(
       (item) => item.id === selectedItemId,
     );
+
     if (!stillVisible) {
       setSelectedItemId(visibleItems[0]?.id ?? null);
     }
@@ -156,6 +151,7 @@ export function CheckoutPage({
     const clampedQuantity = Math.max(0, Math.min(quantity, item.current_stock));
     setCart((current) => {
       const others = current.filter((line) => line.item_id !== itemId);
+
       if (clampedQuantity === 0) {
         return others;
       }
@@ -170,6 +166,17 @@ export function CheckoutPage({
         },
       ];
     });
+  }
+
+  function addItemToCart(itemId: string) {
+    const item = snapshot.items.find((entry) => entry.id === itemId);
+    if (!item) {
+      return;
+    }
+
+    setSelectedItemId(itemId);
+    setCartLineQuantity(itemId, getCartQuantity(itemId) + 1);
+    setError(null);
   }
 
   function stopScanner() {
@@ -345,7 +352,7 @@ export function CheckoutPage({
                 handleDetectedCode(nextCode.rawValue);
               }
             } catch {
-              // Ignore single-frame detector errors and keep scanning.
+              // Ignore frame-level detector failures and keep scanning.
             } finally {
               isDetectingRef.current = false;
             }
@@ -375,28 +382,13 @@ export function CheckoutPage({
     };
   }, [scanDialogOpen, snapshot.items]);
 
-  function addItemToCart(itemId: string) {
-    if (!selectedUserId) {
-      setError("Please select a user before adding items to the batch.");
-      return;
-    }
-
-    const item = snapshot.items.find((entry) => entry.id === itemId);
-    if (!item) {
-      return;
-    }
-
-    setSelectedItemId(itemId);
-    setCartLineQuantity(itemId, getCartQuantity(itemId) + 1);
-    setError(null);
-  }
-
   function syncSnapshot(nextSnapshot: InventorySnapshot) {
     setSnapshot(nextSnapshot);
 
     if (selectedItemId) {
       const nextSelected =
         nextSnapshot.items.find((item) => item.id === selectedItemId) ?? null;
+
       if (!nextSelected) {
         setSelectedItemId(nextSnapshot.items[0]?.id ?? null);
       }
@@ -410,7 +402,7 @@ export function CheckoutPage({
           item_id: line.item_id,
           quantity: line.quantity,
         })),
-        performed_by_user_id: performedByUserId,
+        performed_by_user_id: selectedUser.id,
       });
 
       if (!result.ok) {
@@ -420,47 +412,11 @@ export function CheckoutPage({
 
       syncSnapshot(result.data.snapshot);
       setCart([]);
+      setQuery("");
+      setActiveTab("all");
       setError(null);
+      router.push("/checkout");
     });
-  }
-
-  if (!selectedUserId) {
-    return (
-      <div className="flex min-h-[72vh] items-center justify-center px-4 py-8 sm:px-6">
-        <Card className="w-full max-w-2xl">
-          <CardHeader className="space-y-3">
-            <Badge variant="outline" className="w-fit">
-              Step 1 of 2
-            </Badge>
-            <CardTitle>Select user</CardTitle>
-            <CardDescription>
-              Choose who is checking out inventory before selecting items for
-              the batch.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <select
-              value={selectedUserId ?? ""}
-              onChange={(event) => {
-                setSelectedUserId(event.target.value || null);
-                setError(null);
-              }}
-              className="flex h-12 w-full rounded-xl border border-border bg-card px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
-            >
-              <option value="">Choose a user</option>
-              {users.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.full_name}
-                </option>
-              ))}
-            </select>
-            <p className="text-sm text-muted-foreground">
-              The next screen will show the inventory browser and batch summary.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
   }
 
   return (
@@ -490,7 +446,6 @@ export function CheckoutPage({
               tabs={tabs}
               activeTab={activeTab}
               onTabChange={setActiveTab}
-              disabled={!selectedUserId}
             />
           </Card>
         </ResizablePanel>
@@ -504,20 +459,15 @@ export function CheckoutPage({
                 <div>
                   <p className="text-sm font-semibold">Checkout batch</p>
                   <p className="text-sm text-muted-foreground">
-                    User: {selectedUser?.full_name}
+                    User: {selectedUser.full_name}
                   </p>
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSelectedUserId(null);
-                    setError(null);
-                  }}
-                >
+                <Button variant="outline" onClick={() => router.push("/checkout")}>
                   Change user
                 </Button>
               </div>
             </div>
+
             <div className="flex min-h-0 flex-1 flex-col">
               <div className="flex-1 overflow-y-auto p-4 sm:p-6">
                 <div className="flex flex-col gap-4">
@@ -534,18 +484,20 @@ export function CheckoutPage({
                         <Button
                           variant="destructive"
                           size="icon-xs"
-                          className="absolute -top-3 -right-3 z-10 rounded-full border border-border bg-background shadow-sm text-destructive hover:bg-destructive/14 hover:text-destructive"
+                          className="absolute -top-3 -right-3 z-10 rounded-full border border-border bg-background text-destructive shadow-sm hover:bg-destructive/14 hover:text-destructive"
                           onClick={() => setCartLineQuantity(line.item_id, 0)}
                         >
                           <XIcon />
                           <span className="sr-only">Remove</span>
                         </Button>
+
                         <div className="min-w-0">
                           <p className="truncate font-medium">{line.name}</p>
                           <p className="truncate text-sm text-muted-foreground">
                             {line.item_id}
                           </p>
                         </div>
+
                         <div className="flex items-center gap-3">
                           <div className="flex items-center rounded-full border border-border bg-background p-1">
                             <Button
@@ -602,7 +554,7 @@ export function CheckoutPage({
                   size="lg"
                   className="w-full"
                   onClick={submitCheckout}
-                  disabled={isPending || cart.length === 0 || !selectedUserId}
+                  disabled={isPending || cart.length === 0}
                 >
                   Submit checkout
                 </Button>

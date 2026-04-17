@@ -1,7 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
-import { Clock3Icon, Edit3Icon, PlusIcon, Trash2Icon } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import {
+  Clock3Icon,
+  Edit3Icon,
+  PlusIcon,
+  ScanLineIcon,
+  Trash2Icon,
+} from "lucide-react";
 
 import {
   createItemAction,
@@ -16,6 +22,7 @@ import { Card } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -36,6 +43,7 @@ import type {
   Unit,
   User,
 } from "@/lib/inventory/types";
+import { cn } from "@/lib/utils";
 
 type ItemFormState = {
   id: string;
@@ -54,6 +62,19 @@ type BatchLine = {
   quantity: number;
 };
 
+type DetectedBarcode = {
+  rawValue?: string;
+};
+
+type BarcodeDetectorInstance = {
+  detect(source: ImageBitmapSource): Promise<DetectedBarcode[]>;
+};
+
+type BarcodeDetectorConstructor = {
+  new (options?: { formats?: string[] }): BarcodeDetectorInstance;
+  getSupportedFormats?: () => Promise<string[]>;
+};
+
 const emptyItemForm: ItemFormState = {
   id: "",
   name: "",
@@ -63,6 +84,25 @@ const emptyItemForm: ItemFormState = {
   department_id: "",
   description: "",
 };
+
+const preferredBarcodeFormats = [
+  "qr_code",
+  "code_128",
+  "code_39",
+  "code_93",
+  "codabar",
+  "ean_13",
+  "ean_8",
+  "upc_a",
+  "upc_e",
+  "itf",
+  "data_matrix",
+  "pdf417",
+  "aztec",
+];
+
+const unsupportedScannerMessage =
+  "Scanner requires BarcodeDetector support in a Chromium-based browser.";
 
 export function InventoryPage({
   initialSnapshot,
@@ -77,6 +117,7 @@ export function InventoryPage({
   const [itemDialogOpen, setItemDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [scanDialogOpen, setScanDialogOpen] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(
     initialSnapshot.items[0]?.id ?? null,
   );
@@ -86,9 +127,20 @@ export function InventoryPage({
   const [error, setError] = useState<string | null>(null);
   const [batchError, setBatchError] = useState<string | null>(null);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [scanStatus, setScanStatus] = useState(
+    "Point your camera at an item QR code or barcode.",
+  );
   const [isPending, startTransition] = useTransition();
   const [isHistoryPending, startHistoryTransition] = useTransition();
   const performedByUserId = users[0]?.id ?? "";
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const scanFrameRef = useRef<number | null>(null);
+  const detectorRef = useRef<BarcodeDetectorInstance | null>(null);
+  const isDetectingRef = useRef(false);
+  const lastScanTimestampRef = useRef(0);
+  const recentScanValueRef = useRef("");
 
   useEffect(() => {
     setSnapshot(initialSnapshot);
@@ -169,6 +221,202 @@ export function InventoryPage({
     setBatchLineQuantity(itemId, getBatchQuantity(itemId) + 1);
     setBatchError(null);
   }
+
+  function stopScanner() {
+    if (scanFrameRef.current !== null) {
+      window.cancelAnimationFrame(scanFrameRef.current);
+      scanFrameRef.current = null;
+    }
+
+    const stream = streamRef.current;
+    if (stream) {
+      for (const track of stream.getTracks()) {
+        track.stop();
+      }
+      streamRef.current = null;
+    }
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+
+    detectorRef.current = null;
+    isDetectingRef.current = false;
+  }
+
+  function handleDetectedCode(rawValue: string) {
+    const normalizedValue = rawValue.trim();
+    if (!normalizedValue) {
+      return;
+    }
+
+    const now = Date.now();
+    if (
+      recentScanValueRef.current === normalizedValue &&
+      now - lastScanTimestampRef.current < 1500
+    ) {
+      return;
+    }
+
+    recentScanValueRef.current = normalizedValue;
+    lastScanTimestampRef.current = now;
+
+    const matchedItem =
+      snapshot.items.find(
+        (item) => item.id.toLowerCase() === normalizedValue.toLowerCase(),
+      ) ?? null;
+
+    if (!matchedItem) {
+      setScanError(`No item found for code "${normalizedValue}".`);
+      setScanStatus("Try another code or scan a different label.");
+      return;
+    }
+
+    if (getBatchQuantity(matchedItem.id) > 0) {
+      setScanError(`"${matchedItem.name}" is already in the batch.`);
+      setSelectedItemId(matchedItem.id);
+      setScanStatus("Scan another item to continue.");
+      return;
+    }
+
+    setActiveTab("all");
+    setQuery("");
+    setSelectedItemId(matchedItem.id);
+    setBatchLineQuantity(matchedItem.id, 1);
+    setBatchError(null);
+    setScanError(null);
+    setScanStatus(`Added "${matchedItem.name}" to the batch.`);
+    setScanDialogOpen(false);
+  }
+
+  useEffect(() => {
+    if (!scanDialogOpen) {
+      stopScanner();
+      setScanError(null);
+      setScanStatus("Point your camera at an item QR code or barcode.");
+      recentScanValueRef.current = "";
+      return;
+    }
+
+    let cancelled = false;
+
+    async function startScanner() {
+      setScanError(null);
+      setScanStatus("Requesting camera access...");
+
+      if (
+        typeof navigator === "undefined" ||
+        !navigator.mediaDevices?.getUserMedia
+      ) {
+        setScanError(unsupportedScannerMessage);
+        setScanStatus(unsupportedScannerMessage);
+        return;
+      }
+
+      const barcodeDetectorApi = (
+        globalThis as typeof globalThis & {
+          BarcodeDetector?: BarcodeDetectorConstructor;
+        }
+      ).BarcodeDetector;
+
+      if (!barcodeDetectorApi) {
+        setScanError(unsupportedScannerMessage);
+        setScanStatus(unsupportedScannerMessage);
+        return;
+      }
+
+      try {
+        const supportedFormats =
+          (await barcodeDetectorApi.getSupportedFormats?.()) ?? [];
+        const formats = supportedFormats.filter((format) =>
+          preferredBarcodeFormats.includes(format),
+        );
+
+        detectorRef.current = formats.length
+          ? new barcodeDetectorApi({ formats })
+          : new barcodeDetectorApi();
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: "environment" },
+          },
+          audio: false,
+        });
+
+        if (cancelled) {
+          for (const track of stream.getTracks()) {
+            track.stop();
+          }
+          return;
+        }
+
+        streamRef.current = stream;
+
+        const video = videoRef.current;
+        if (!video) {
+          throw new Error("Video preview is not ready.");
+        }
+
+        video.srcObject = stream;
+        await video.play();
+        setScanStatus("Scanning for QR codes and barcodes...");
+
+        const scanFrame = async () => {
+          if (cancelled) {
+            return;
+          }
+
+          const activeVideo = videoRef.current;
+          const detector = detectorRef.current;
+
+          if (!activeVideo || !detector) {
+            scanFrameRef.current = window.requestAnimationFrame(scanFrame);
+            return;
+          }
+
+          if (
+            activeVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA &&
+            !isDetectingRef.current
+          ) {
+            isDetectingRef.current = true;
+
+            try {
+              const detectedCodes = await detector.detect(activeVideo);
+              const nextCode = detectedCodes.find((entry) => entry.rawValue);
+
+              if (nextCode?.rawValue) {
+                handleDetectedCode(nextCode.rawValue);
+              }
+            } catch {
+              // Ignore frame-level detector failures and keep scanning.
+            } finally {
+              isDetectingRef.current = false;
+            }
+          }
+
+          scanFrameRef.current = window.requestAnimationFrame(scanFrame);
+        };
+
+        scanFrameRef.current = window.requestAnimationFrame(scanFrame);
+      } catch (scanStartError) {
+        const message =
+          scanStartError instanceof Error
+            ? scanStartError.message
+            : "Camera access was blocked.";
+
+        setScanError(message);
+        setScanStatus("Allow camera access and try again.");
+        stopScanner();
+      }
+    }
+
+    startScanner();
+
+    return () => {
+      cancelled = true;
+      stopScanner();
+    };
+  }, [scanDialogOpen, snapshot.items]);
 
   function openCreateDialog(prefill?: Partial<ItemFormState>) {
     setItemForm({
@@ -299,10 +547,16 @@ export function InventoryPage({
               onSelectItem={addItemToBatch}
               getBatchQuantity={getBatchQuantity}
               headerAction={
-                <Button onClick={() => openCreateDialog()}>
-                  <PlusIcon data-icon="inline-start" />
-                  New item
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button onClick={() => setScanDialogOpen(true)}>
+                    <ScanLineIcon data-icon="inline-start" />
+                    Scan
+                  </Button>
+                  <Button onClick={() => openCreateDialog()}>
+                    <PlusIcon data-icon="inline-start" />
+                    New item
+                  </Button>
+                </div>
               }
               tabs={tabs}
               activeTab={activeTab}
@@ -708,6 +962,59 @@ export function InventoryPage({
                 No movement records yet.
               </p>
             ) : null}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={scanDialogOpen} onOpenChange={setScanDialogOpen}>
+        <DialogContent className="w-[min(92vw,44rem)]">
+          <DialogHeader className="space-y-2">
+            <DialogTitle>Scan item</DialogTitle>
+            <DialogDescription>
+              Chrome will use your camera to read a QR code or barcode and add
+              the matching item ID to the stock-in batch.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-4 space-y-4">
+            <div className="relative overflow-hidden rounded-[2rem] border border-border bg-muted/30">
+              <video
+                ref={videoRef}
+                className="aspect-[4/3] w-full bg-black object-cover"
+                autoPlay
+                muted
+                playsInline
+              />
+              {scanError === unsupportedScannerMessage ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 p-6 text-center">
+                  <p className="max-w-xs text-base font-medium text-white">
+                    {unsupportedScannerMessage}
+                  </p>
+                </div>
+              ) : (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-6">
+                  <div className="h-48 w-full max-w-xs rounded-[2rem] border-2 border-white/80 shadow-[0_0_0_999px_rgba(0,0,0,0.12)]" />
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-border bg-muted/20 px-4 py-3">
+              <p className="text-sm font-medium">{scanStatus}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Match is checked against the item `id` in inventory.
+              </p>
+            </div>
+
+            <div
+              className={cn(
+                "rounded-2xl border px-4 py-3 text-sm",
+                scanError
+                  ? "border-destructive/30 bg-destructive/8 text-destructive"
+                  : "border-border bg-background text-muted-foreground",
+              )}
+            >
+              {scanError ?? "Scanner is ready. Hold the code steady in frame."}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
