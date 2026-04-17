@@ -1,6 +1,6 @@
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { neonConfig } from "@neondatabase/serverless";
-import { PrismaClient } from "./generated/prisma/client";
+import { PrismaClient } from "@/lib/generated/prisma/client";
 
 /**
  * Prisma 7 + Neon + Vercel (HTTP/Fetch Mode)
