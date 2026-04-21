@@ -1,6 +1,6 @@
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { neonConfig } from "@neondatabase/serverless";
-import { PrismaClient } from "@/lib/generated/prisma/client";
+import { Prisma, PrismaClient } from "@/lib/generated/prisma/client";
 
 /**
  * Prisma 7 + Neon + Vercel (HTTP/Fetch Mode)
@@ -22,6 +22,11 @@ export const db =
   new PrismaClient({
     adapter,
     log: ["query", "error", "warn"],
+    transactionOptions: {
+      isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+      maxWait: 15_000,
+      timeout: 20_000,
+    },
   });
 
 if (process.env.NODE_ENV === "development") globalForPrisma.prisma = db;
