@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
-  Clock3Icon,
-  Edit3Icon,
   PlusIcon,
   ScanLineIcon,
-  Trash2Icon,
 } from "lucide-react";
 
 import {
@@ -15,6 +13,7 @@ import {
   stockInBatchAction,
   updateItemAction,
 } from "@/app/actions";
+import { BatchListItem } from "@/components/batch-list-item";
 import { ItemBrowser } from "@/components/item-browser";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -106,11 +105,12 @@ const unsupportedScannerMessage =
 
 export function InventoryPage({
   initialSnapshot,
-  users,
+  selectedUser,
 }: {
   initialSnapshot: InventorySnapshot;
-  users: User[];
+  selectedUser: User;
 }) {
+  const router = useRouter();
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [query, setQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"all" | "others" | string>("all");
@@ -133,7 +133,7 @@ export function InventoryPage({
   );
   const [isPending, startTransition] = useTransition();
   const [isHistoryPending, startHistoryTransition] = useTransition();
-  const performedByUserId = users[0]?.id ?? "";
+  const performedByUserId = selectedUser.id;
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const scanFrameRef = useRef<number | null>(null);
@@ -569,6 +569,20 @@ export function InventoryPage({
 
         <ResizablePanel minSize="30%" className="min-w-0">
           <Card className="flex h-full w-full min-w-0 flex-col overflow-hidden">
+            <div className="border-b border-border bg-card px-4 py-4 sm:px-5">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold">Stock-in batch</p>
+                  <p className="text-sm text-muted-foreground">
+                    User: {selectedUser.full_name}
+                  </p>
+                </div>
+                <Button variant="outline" onClick={() => router.push("/inventory")}>
+                  Change user
+                </Button>
+              </div>
+            </div>
+
             <div className="flex min-h-0 flex-1 flex-col">
               <div className="flex-1 overflow-y-auto p-4 sm:p-6">
                 <div className="flex flex-col gap-4">
@@ -577,90 +591,22 @@ export function InventoryPage({
                   ) : null}
 
                   <div className="flex flex-col gap-3">
-                    {batch.map((line) => {
-                      const item = snapshot.items.find(
-                        (entry) => entry.id === line.item_id,
-                      );
-
-                      return (
-                        <div
-                          key={line.item_id}
-                          className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-muted/30 p-4"
-                        >
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="truncate font-medium">
-                                {line.name}
-                              </p>
-                              {item ? (
-                                <>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => openItemDialog(item)}
-                                  >
-                                    <Edit3Icon data-icon="inline-start" />
-                                    Details
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                      openHistoryDialog(line.item_id)
-                                    }
-                                  >
-                                    <Clock3Icon data-icon="inline-start" />
-                                    History
-                                  </Button>
-                                </>
-                              ) : null}
-                            </div>
-                            <p className="truncate text-sm text-muted-foreground">
-                              {line.item_id}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() =>
-                                setBatchLineQuantity(
-                                  line.item_id,
-                                  line.quantity - 1,
-                                )
-                              }
-                            >
-                              -
-                            </Button>
-                            <Badge variant="outline">
-                              {formatStock(line.quantity, line.unit)}
-                            </Badge>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() =>
-                                setBatchLineQuantity(
-                                  line.item_id,
-                                  line.quantity + 1,
-                                )
-                              }
-                            >
-                              +
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() =>
-                                setBatchLineQuantity(line.item_id, 0)
-                              }
-                            >
-                              <Trash2Icon />
-                              <span className="sr-only">Remove</span>
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {batch.map((line) => (
+                      <BatchListItem
+                        key={line.item_id}
+                        itemId={line.item_id}
+                        name={line.name}
+                        unit={line.unit}
+                        quantity={line.quantity}
+                        currentStock={
+                          snapshot.items.find(
+                            (item) => item.id === line.item_id,
+                          )?.current_stock
+                        }
+                        enforceStockLimit={false}
+                        onQuantityChange={setBatchLineQuantity}
+                      />
+                    ))}
 
                     {batch.length === 0 ? (
                       <p className="text-sm text-muted-foreground">

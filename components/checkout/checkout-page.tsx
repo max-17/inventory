@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ScanLineIcon, XIcon } from "lucide-react";
+import { ScanLineIcon } from "lucide-react";
 
 import { checkoutAction } from "@/app/actions";
+import { BatchListItem } from "@/components/batch-list-item";
 import { ItemBrowser } from "@/components/item-browser";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -477,67 +478,19 @@ export function CheckoutPage({
 
                   <div className="flex flex-col gap-3">
                     {cart.map((line) => (
-                      <div
+                      <BatchListItem
                         key={line.item_id}
-                        className="relative mt-3 flex items-end justify-between gap-3 rounded-2xl border border-border bg-muted/30 p-4"
-                      >
-                        <Button
-                          variant="destructive"
-                          size="icon-xs"
-                          className="absolute -top-3 -right-3 z-10 rounded-full border border-border bg-background text-destructive shadow-sm hover:bg-destructive/14 hover:text-destructive"
-                          onClick={() => setCartLineQuantity(line.item_id, 0)}
-                        >
-                          <XIcon />
-                          <span className="sr-only">Remove</span>
-                        </Button>
-
-                        <div className="min-w-0">
-                          <p className="truncate font-medium">{line.name}</p>
-                          <p className="truncate text-sm text-muted-foreground">
-                            {line.item_id}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center rounded-full border border-border bg-background p-1">
-                            <Button
-                              variant="secondary"
-                              size="icon"
-                              className="size-9 rounded-full bg-muted hover:bg-muted/80"
-                              onClick={() =>
-                                setCartLineQuantity(
-                                  line.item_id,
-                                  line.quantity - 1,
-                                )
-                              }
-                            >
-                              -
-                            </Button>
-                            <div className="min-w-24 px-4 text-center text-sm font-medium">
-                              {formatStock(line.quantity, line.unit)}
-                            </div>
-                            <Button
-                              variant="secondary"
-                              size="icon"
-                              className="size-9 rounded-full bg-muted hover:bg-muted/80"
-                              onClick={() =>
-                                setCartLineQuantity(
-                                  line.item_id,
-                                  line.quantity + 1,
-                                )
-                              }
-                              disabled={
-                                line.quantity >=
-                                (snapshot.items.find(
-                                  (item) => item.id === line.item_id,
-                                )?.current_stock ?? 0)
-                              }
-                            >
-                              +
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
+                        itemId={line.item_id}
+                        name={line.name}
+                        unit={line.unit}
+                        quantity={line.quantity}
+                        currentStock={
+                          snapshot.items.find(
+                            (item) => item.id === line.item_id,
+                          )?.current_stock
+                        }
+                        onQuantityChange={setCartLineQuantity}
+                      />
                     ))}
 
                     {cart.length === 0 ? (
