@@ -2,10 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  PlusIcon,
-  ScanLineIcon,
-} from "lucide-react";
+import { PlusIcon, ScanLineIcon } from "lucide-react";
 
 import {
   createItemAction,
@@ -577,7 +574,10 @@ export function InventoryPage({
                     User: {selectedUser.full_name}
                   </p>
                 </div>
-                <Button variant="outline" onClick={() => router.push("/inventory")}>
+                <Button
+                  variant="outline"
+                  onClick={() => router.push("/inventory")}
+                >
                   Change user
                 </Button>
               </div>

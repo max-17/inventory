@@ -463,7 +463,10 @@ export function CheckoutPage({
                     User: {selectedUser.full_name}
                   </p>
                 </div>
-                <Button variant="outline" onClick={() => router.push("/checkout")}>
+                <Button
+                  variant="outline"
+                  onClick={() => router.push("/checkout")}
+                >
                   Change user
                 </Button>
               </div>

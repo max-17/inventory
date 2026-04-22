@@ -20,5 +20,7 @@ export default async function InventoryUserRoute({
     notFound();
   }
 
-  return <InventoryPage initialSnapshot={snapshot} selectedUser={selectedUser} />;
+  return (
+    <InventoryPage initialSnapshot={snapshot} selectedUser={selectedUser} />
+  );
 }

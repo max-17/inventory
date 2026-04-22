@@ -1,10 +1,6 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
-function SkeletonBlock({
-  className,
-}: {
-  className: string;
-}) {
+function SkeletonBlock({ className }: { className: string }) {
   return <div className={`animate-pulse rounded-2xl bg-muted ${className}`} />;
 }
 
