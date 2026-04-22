@@ -151,21 +151,34 @@ export function CheckoutPage({
 
     const clampedQuantity = Math.max(0, Math.min(quantity, item.current_stock));
     setCart((current) => {
-      const others = current.filter((line) => line.item_id !== itemId);
+      const existingIndex = current.findIndex((line) => line.item_id === itemId);
 
       if (clampedQuantity === 0) {
-        return others;
+        if (existingIndex === -1) {
+          return current;
+        }
+
+        return current.filter((_, index) => index !== existingIndex);
       }
 
-      return [
-        ...others,
-        {
-          item_id: item.id,
-          name: item.name,
-          unit: item.unit,
-          quantity: clampedQuantity,
-        },
-      ];
+      if (existingIndex === -1) {
+        return [
+          ...current,
+          {
+            item_id: item.id,
+            name: item.name,
+            unit: item.unit,
+            quantity: clampedQuantity,
+          },
+        ];
+      }
+
+      const next = [...current];
+      next[existingIndex] = {
+        ...next[existingIndex],
+        quantity: clampedQuantity,
+      };
+      return next;
     });
   }
 

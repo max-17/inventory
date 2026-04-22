@@ -191,20 +191,33 @@ export function InventoryPage({
 
     const nextQuantity = Math.max(0, quantity);
     setBatch((current) => {
-      const others = current.filter((line) => line.item_id !== itemId);
+      const existingIndex = current.findIndex((line) => line.item_id === itemId);
       if (nextQuantity === 0) {
-        return others;
+        if (existingIndex === -1) {
+          return current;
+        }
+
+        return current.filter((_, index) => index !== existingIndex);
       }
 
-      return [
-        ...others,
-        {
-          item_id: item.id,
-          name: item.name,
-          unit: item.unit,
-          quantity: nextQuantity,
-        },
-      ];
+      if (existingIndex === -1) {
+        return [
+          ...current,
+          {
+            item_id: item.id,
+            name: item.name,
+            unit: item.unit,
+            quantity: nextQuantity,
+          },
+        ];
+      }
+
+      const next = [...current];
+      next[existingIndex] = {
+        ...next[existingIndex],
+        quantity: nextQuantity,
+      };
+      return next;
     });
   }
 
@@ -430,21 +443,6 @@ export function InventoryPage({
     setCreateDialogOpen(true);
   }
 
-  function openItemDialog(item: ItemWithRelations) {
-    setSelectedItemId(item.id);
-    setItemForm({
-      id: item.id,
-      name: item.name,
-      unit: item.unit,
-      minimum_stock: item.minimum_stock,
-      current_stock: item.current_stock,
-      department_id: item.department_id ?? "",
-      description: item.description ?? "",
-    });
-    setError(null);
-    setItemDialogOpen(true);
-  }
-
   function submitCreateItem() {
     startTransition(async () => {
       const result = await createItemAction({
@@ -509,22 +507,6 @@ export function InventoryPage({
       setSnapshot(result.data.snapshot);
       setBatch([]);
       setBatchError(null);
-    });
-  }
-
-  function openHistoryDialog(itemId: string) {
-    setHistory([]);
-    setHistoryError(null);
-    setHistoryDialogOpen(true);
-
-    startHistoryTransition(async () => {
-      const result = await getItemHistoryAction(itemId);
-      if (!result.ok) {
-        setHistoryError(result.error);
-        return;
-      }
-
-      setHistory(result.data.movements);
     });
   }
 
