@@ -1,4 +1,8 @@
-import { ArrowDownLeftIcon, ArrowUpRightIcon, Clock3Icon } from "lucide-react";
+import {
+  AlertCircleIcon,
+  ArrowDownLeftIcon,
+  ArrowUpRightIcon,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -8,8 +12,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { formatMovementType, formatStock } from "@/lib/inventory/format";
-import type { ItemMovementRecord } from "@/lib/inventory/types";
+import {
+  formatMovementType,
+  formatStock,
+  formatDepartmentName,
+} from "@/lib/inventory/format";
+import type {
+  ItemMovementRecord,
+  InventorySnapshot,
+} from "@/lib/inventory/types";
 
 function ActivityList({
   title,
@@ -56,7 +67,9 @@ function ActivityList({
                     </div>
                     <div className="min-w-0 space-y-2">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="truncate font-medium">{movement.item.name}</p>
+                        <p className="truncate font-medium">
+                          {movement.item.name}
+                        </p>
                         <Badge
                           variant={isStockIn ? "success" : "warning"}
                           className="rounded-full"
@@ -66,11 +79,19 @@ function ActivityList({
                       </div>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                         <span>{movement.item_id}</span>
-                        <span>{movement.performer?.full_name ?? "Unknown operator"}</span>
-                        <span>{new Date(movement.created_at).toLocaleString("en-GB")}</span>
+                        <span>
+                          {movement.performer?.full_name ?? "Unknown operator"}
+                        </span>
+                        <span>
+                          {new Date(movement.created_at).toLocaleString(
+                            "en-GB",
+                          )}
+                        </span>
                       </div>
                       {movement.note ? (
-                        <p className="text-sm text-muted-foreground">{movement.note}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {movement.note}
+                        </p>
                       ) : null}
                     </div>
                   </div>
@@ -79,7 +100,10 @@ function ActivityList({
                       {formatStock(movement.quantity, movement.unit)}
                     </Badge>
                     {movement.reference ? (
-                      <Badge variant="outline" className="rounded-full px-3 py-1">
+                      <Badge
+                        variant="outline"
+                        className="rounded-full px-3 py-1"
+                      >
                         Ref {movement.reference}
                       </Badge>
                     ) : null}
@@ -94,16 +118,78 @@ function ActivityList({
   );
 }
 
+function LowStockList({ snapshot }: { snapshot: InventorySnapshot }) {
+  const lowStockItems = snapshot.items.filter(
+    (item) => item.current_stock <= item.minimum_stock,
+  );
+
+  return (
+    <Card className="rounded-[2rem]">
+      <CardHeader>
+        <CardTitle>Low stock items</CardTitle>
+        <CardDescription>
+          Items below their minimum stock level that need restocking.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {lowStockItems.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-border bg-muted/20 px-5 py-10 text-center text-sm text-muted-foreground">
+            All items have sufficient stock.
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {lowStockItems.map((item) => (
+              <div
+                key={item.id}
+                className="flex flex-col gap-3 rounded-3xl border border-border bg-background px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="flex min-w-0 items-start gap-4">
+                  <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-red-100 text-red-700">
+                    <AlertCircleIcon className="size-5" />
+                  </div>
+                  <div className="min-w-0 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="truncate font-medium">{item.name}</p>
+                      <Badge variant="destructive" className="rounded-full">
+                        Low stock
+                      </Badge>
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                      <span>{item.id}</span>
+                      <span>{formatDepartmentName(item.department)}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                  <Badge variant="outline" className="rounded-full px-3 py-1">
+                    Current: {formatStock(item.current_stock, item.unit)}
+                  </Badge>
+                  <Badge variant="outline" className="rounded-full px-3 py-1">
+                    Min: {formatStock(item.minimum_stock, item.unit)}
+                  </Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function ActivityPage({
   checkoutMovements,
   stockInMovements,
+  snapshot,
 }: {
   checkoutMovements: ItemMovementRecord[];
   stockInMovements: ItemMovementRecord[];
+  snapshot: InventorySnapshot;
 }) {
   const allMovements = [...checkoutMovements, ...stockInMovements].sort(
     (left, right) =>
-      new Date(right.created_at).getTime() - new Date(left.created_at).getTime(),
+      new Date(right.created_at).getTime() -
+      new Date(left.created_at).getTime(),
   );
 
   return (
@@ -124,19 +210,25 @@ export function ActivityPage({
               <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
                 Total events
               </p>
-              <p className="mt-1 text-2xl font-semibold">{allMovements.length}</p>
+              <p className="mt-1 text-2xl font-semibold">
+                {allMovements.length}
+              </p>
             </div>
             <div className="rounded-2xl border border-border bg-muted/20 px-4 py-3">
               <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
                 Checkouts
               </p>
-              <p className="mt-1 text-2xl font-semibold">{checkoutMovements.length}</p>
+              <p className="mt-1 text-2xl font-semibold">
+                {checkoutMovements.length}
+              </p>
             </div>
             <div className="rounded-2xl border border-border bg-muted/20 px-4 py-3">
               <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
                 Stock-ins
               </p>
-              <p className="mt-1 text-2xl font-semibold">{stockInMovements.length}</p>
+              <p className="mt-1 text-2xl font-semibold">
+                {stockInMovements.length}
+              </p>
             </div>
           </div>
         </CardHeader>
@@ -149,44 +241,7 @@ export function ActivityPage({
           movements={allMovements}
         />
 
-        <Card className="rounded-[2rem]">
-          <CardHeader>
-            <CardTitle>Latest event</CardTitle>
-            <CardDescription>
-              The most recent stock movement recorded in the system.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {allMovements[0] ? (
-              <div className="rounded-3xl border border-border bg-muted/20 p-5">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-2xl bg-background">
-                    <Clock3Icon className="size-5 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="font-medium">{allMovements[0].item.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatMovementType(allMovements[0].movement_type)} by{" "}
-                      {allMovements[0].performer?.full_name ?? "Unknown operator"}
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Badge variant="outline" className="rounded-full px-3 py-1">
-                    {formatStock(allMovements[0].quantity, allMovements[0].unit)}
-                  </Badge>
-                  <Badge variant="outline" className="rounded-full px-3 py-1">
-                    {new Date(allMovements[0].created_at).toLocaleString("en-GB")}
-                  </Badge>
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-3xl border border-dashed border-border bg-muted/20 px-5 py-10 text-center text-sm text-muted-foreground">
-                No activity yet.
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <LowStockList snapshot={snapshot} />
       </div>
     </div>
   );
