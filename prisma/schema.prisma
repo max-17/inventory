@@ -54,18 +54,18 @@ model User {
 }
 
 model Item {
-  id           String   @id
+  id           String          @id
   name         String
   unit         Unit
-  currentStock Int      @map("current_stock")
-  minimumStock Int      @map("minimum_stock")
-  departmentId String?  @map("department_id")
+  currentStock Int             @map("current_stock")
+  minimumStock Int             @map("minimum_stock")
+  departmentId String?         @map("department_id")
   description  String?
-  createdAt    DateTime @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime @map("updated_at") @db.Timestamptz(6)
-
-  department Department?     @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  movements  StockMovement[]
+  createdAt    DateTime        @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime        @map("updated_at") @db.Timestamptz(6)
+  barcode      String?         @unique
+  department   Department?     @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  movements    StockMovement[]
 
   @@index([departmentId])
   @@index([name])
